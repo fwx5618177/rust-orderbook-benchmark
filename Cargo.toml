@@ -1,0 +1,17 @@
+[package]
+name = "rust-orderbook-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.5"               # 随机生成订单数据
+criterion = "0.5"            # 基准测试工具
+
+[dev-dependencies]
+assert_approx_eq = "1.1.0"   # 测试浮点数比较
+
+[[bench]]
+name = "benchmark"
+harness = false              # 禁用默认的测试 harness，使用 Criterion
