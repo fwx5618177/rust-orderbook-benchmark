@@ -2,12 +2,232 @@ use criterion::{criterion_group, criterion_main, Criterion, black_box};
 use rand::Rng;
 use rust_orderbook_benchmark::rb_tree::rb_tree::RBTree;
 use rust_orderbook_benchmark::btree_map::btree_map::BTreeMap;
+use rust_orderbook_benchmark::bptree::bptree::BPTree;
 
 fn generate_random_pairs(n: usize) -> Vec<(u32, u32)> {
     let mut rng = rand::thread_rng();
     (0..n)
         .map(|_| (rng.gen_range(1..100_000), rng.gen_range(1..100_000)))
         .collect()
+}
+
+fn bench_b_plus_tree(c: &mut Criterion) {
+    let mut group = c.benchmark_group("BPTree");
+    group.sample_size(10).measurement_time(std::time::Duration::new(3, 0));
+
+    let data_100k = generate_random_pairs(100_000);
+    let data_50k = generate_random_pairs(50_000);
+
+    // 0. 10w vs 5w
+    group.bench_function("bptree_insert_100k", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    group.bench_function("bptree_insert_50k", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_50k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 1. 高频 vs 低频
+    group.bench_function("bptree_insert_high_freq", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_insert_low_freq", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in data_100k.iter().step_by(10) {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 2. 小批量 vs 大批量
+    group.bench_function("bptree_insert_small_batch", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in data_100k.iter().take(100) {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_insert_large_batch", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 3. 逐笔 vs 批量
+    group.bench_function("bptree_insert_single", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_insert_batch", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for chunk in data_100k.chunks(100) {
+                for (k, v) in chunk {
+                    bpt.insert(*k, *v);
+                }
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 4. 批量 vs 单笔
+    group.bench_function("bptree_insert_bulk", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_insert_single_op", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 5. 单条插入/删除/查询/区间查询
+    group.bench_function("bptree_single_insert", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            bpt.insert(1, 1);
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_single_delete", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            bpt.insert(1, 1);
+            bpt.delete(&1);
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_single_query", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            bpt.insert(1, 1);
+            black_box(bpt.get(&1));
+        })
+    });
+    group.bench_function("bptree_single_range_query", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            bpt.insert(1, 1);
+            black_box(bpt.range_query(&1, &10));
+        })
+    });
+
+    // 6. 批量插入/删除/查询/区间查询
+    group.bench_function("bptree_bulk_insert", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_bulk_delete", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            for (k, _) in &data_100k {
+                bpt.delete(k);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_bulk_query", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            for (k, _) in &data_100k {
+                black_box(bpt.get(k));
+            }
+        })
+    });
+    group.bench_function("bptree_bulk_range_query", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.range_query(&1, &10));
+        })
+    });
+
+    // 7. 区间插入/删除/查询/区间查询
+    group.bench_function("bptree_range_insert", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in data_100k.iter().take(10) {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_range_delete", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in data_100k.iter().take(10) {
+                bpt.insert(*k, *v);
+            }
+            for (k, _) in data_100k.iter().take(10) {
+                bpt.delete(k);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+    group.bench_function("bptree_range_query", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in data_100k.iter().take(10) {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.range_query(&1, &10));
+        })
+    });
+
+    group.finish();
 }
 
 fn bench_rb_tree(c: &mut Criterion) {
@@ -472,5 +692,6 @@ fn bench_btree_map(c: &mut Criterion) {
     group.finish();
 }
 
+// criterion_group!(benches, bench_b_plus_tree, bench_rb_tree, bench_btree_map);
 criterion_group!(benches, bench_rb_tree, bench_btree_map);
 criterion_main!(benches);
