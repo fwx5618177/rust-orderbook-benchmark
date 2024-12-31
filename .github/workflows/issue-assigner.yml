@@ -2,50 +2,78 @@ name: Issue Assigner
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 jobs:
   auto-assign:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Auto Assign Issue
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            // Get repository owner and specified user
-            const owners = [context.repo.owner, 'fwx5618177'];
             const issue = context.payload.issue;
+            const issueCreator = issue.user.login;
+            const repoOwner = context.repo.owner;
             
-            // Get issue labels
+            // 定义可能的受让人列表（仓库所有者和指定用户）
+            const possibleAssignees = [repoOwner, 'fwx5618177'];
+            
+            // 获取 issue 标签
             const labels = issue.labels.map(label => label.name);
             
-            // Determine assignee based on labels or round-robin
-            let assignee = owners[Math.floor(Math.random() * owners.length)];
-            
-            // If issue has specific labels, assign to specific owners
+            // 确定受让人
+            let assignee;
             if (labels.includes('bug')) {
-              assignee = context.repo.owner; // Assign bugs to repo owner
+              assignee = repoOwner;
             } else if (labels.includes('enhancement')) {
-              assignee = 'fwx5618177'; // Assign enhancements to specified user
+              assignee = 'fwx5618177';
+            } else {
+              // 如果没有特定标签，随机选择一个受让人（排除创建者自己）
+              const otherAssignees = possibleAssignees.filter(a => a !== issueCreator);
+              assignee = otherAssignees[Math.floor(Math.random() * otherAssignees.length)];
+              
+              // 如果没有其他可选择的受让人，则分配给仓库所有者
+              if (!assignee) {
+                assignee = repoOwner;
+              }
             }
             
             try {
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                assignees: [assignee]
-              });
-              
-              // Add a comment to notify the assignee
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                body: `@${assignee} has been assigned to this issue.`
-              });
-              
+              // 检查 issue 是否已经有受让人
+              if (!issue.assignee) {
+                // 添加受让人
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: [assignee]
+                });
+                
+                // 添加通知评论
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `This issue has been automatically assigned to @${assignee}.`
+                });
+              }
             } catch (error) {
-              console.log('Error assigning issue:', error);
+              console.log('Error in issue assignment:', error);
+              // 如果分配失败，尝试分配给仓库所有者
+              if (assignee !== repoOwner) {
+                try {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    assignees: [repoOwner]
+                  });
+                } catch (fallbackError) {
+                  console.log('Fallback assignment failed:', fallbackError);
+                }
+              }
             } 
