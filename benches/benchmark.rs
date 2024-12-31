@@ -13,7 +13,7 @@ fn generate_random_pairs(n: usize) -> Vec<(u32, u32)> {
 
 fn bench_b_plus_tree(c: &mut Criterion) {
     let mut group = c.benchmark_group("BPTree");
-    group.sample_size(10).measurement_time(std::time::Duration::new(3, 0));
+    group.sample_size(10).measurement_time(std::time::Duration::new(5, 0));
 
     let data_100k = generate_random_pairs(100_000);
     let data_50k = generate_random_pairs(50_000);
@@ -165,12 +165,16 @@ fn bench_b_plus_tree(c: &mut Criterion) {
     group.bench_function("bptree_bulk_delete", |b| {
         b.iter(|| {
             let mut bpt = BPTree::new(3);
+            // 先插入所有数据
             for (k, v) in &data_100k {
                 bpt.insert(*k, *v);
             }
-            for (k, _) in &data_100k {
-                bpt.delete(k);
-            }
+            // 准备要删除的键
+            let delete_keys: Vec<_> = data_100k.iter()
+                .map(|(k, _)| *k)
+                .collect();
+            // 批量删除
+            bpt.bulk_delete(&delete_keys);
             black_box(bpt.approximate_memory_usage());
         })
     });
@@ -224,6 +228,135 @@ fn bench_b_plus_tree(c: &mut Criterion) {
                 bpt.insert(*k, *v);
             }
             black_box(bpt.range_query(&1, &10));
+        })
+    });
+
+    // 添加百万级数据测试
+    let data_1m = generate_random_pairs(1_000_000);
+    let data_5m = generate_random_pairs(5_000_000);
+
+    // 百万级数据插入测试
+    group.bench_function("bptree_insert_1m", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_1m {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    group.bench_function("bptree_insert_5m", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_5m {
+                bpt.insert(*k, *v);
+            }
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 百万级数据查询测试
+    group.bench_function("bptree_query_1m", |b| {
+        let mut bpt = BPTree::new(3);
+        for (k, v) in &data_1m {
+            bpt.insert(*k, *v);
+        }
+        let query_keys: Vec<_> = data_1m.iter().step_by(1000).map(|(k, _)| k).collect();
+        
+        b.iter(|| {
+            for k in &query_keys {
+                black_box(bpt.get(k));
+            }
+        })
+    });
+
+    // 百万级数据范围查询测试
+    group.bench_function("bptree_range_query_1m", |b| {
+        let mut bpt = BPTree::new(3);
+        for (k, v) in &data_1m {
+            bpt.insert(*k, *v);
+        }
+        
+        b.iter(|| {
+            black_box(bpt.range_query(&1, &50_000));
+        })
+    });
+
+    // 百万级数据批量操作测试
+    group.bench_function("bptree_bulk_ops_1m", |b| {
+        let mut bpt = BPTree::new(3);
+        
+        b.iter(|| {
+            // 插入100万条数据
+            for (k, v) in &data_1m {
+                bpt.insert(*k, *v);
+            }
+            
+            // 随机查询1000条
+            for (k, _) in data_1m.iter().step_by(1000) {
+                black_box(bpt.get(k));
+            }
+            
+            // 范围查询
+            black_box(bpt.range_query(&1, &50_000));
+            
+            // 删除1000条
+            for (k, _) in data_1m.iter().step_by(1000) {
+                bpt.delete(k);
+            }
+            
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 测试不同 min_degree 对性能的影响
+    for degree in [4, 8, 16, 32, 64] {
+        group.bench_function(&format!("bptree_insert_1m_degree_{}", degree), |b| {
+            b.iter(|| {
+                let mut bpt = BPTree::new(degree);
+                for (k, v) in &data_1m {
+                    bpt.insert(*k, *v);
+                }
+                black_box(bpt.approximate_memory_usage());
+            })
+        });
+    }
+
+    // 添加大数据量的批量删除测试
+    group.bench_function("bptree_bulk_delete_1m", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            // 插入100万数据
+            for (k, v) in &data_1m {
+                bpt.insert(*k, *v);
+            }
+            // 准备要删除的键
+            let delete_keys: Vec<_> = data_1m.iter()
+                .step_by(10)  // 每10个删除一个，减少测试时间
+                .map(|(k, _)| *k)
+                .collect();
+            // 批量删除
+            bpt.bulk_delete(&delete_keys);
+            black_box(bpt.approximate_memory_usage());
+        })
+    });
+
+    // 添加不同模式的批量删除测试
+    group.bench_function("bptree_bulk_delete_random", |b| {
+        b.iter(|| {
+            let mut bpt = BPTree::new(3);
+            for (k, v) in &data_100k {
+                bpt.insert(*k, *v);
+            }
+            // 随机选择要删除的键
+            let mut rng = rand::thread_rng();
+            let delete_keys: Vec<_> = data_100k.iter()
+                .filter(|_| rng.gen_bool(0.5))  // 随机选择50%的键删除
+                .map(|(k, _)| *k)
+                .collect();
+            bpt.bulk_delete(&delete_keys);
+            black_box(bpt.approximate_memory_usage());
         })
     });
 
@@ -692,6 +825,6 @@ fn bench_btree_map(c: &mut Criterion) {
     group.finish();
 }
 
-// criterion_group!(benches, bench_b_plus_tree, bench_rb_tree, bench_btree_map);
-criterion_group!(benches, bench_rb_tree, bench_btree_map);
+criterion_group!(benches, bench_b_plus_tree, bench_rb_tree, bench_btree_map);
+// criterion_group!(benches, bench_rb_tree, bench_btree_map);
 criterion_main!(benches);
