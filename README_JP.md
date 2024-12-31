@@ -1,5 +1,9 @@
 # Orderbook
 
+[![GitHub](https://img.shields.io/github/license/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/issues)
+
 <div align="center">
   <h2>Language / 语言 / 言語</h2>
   <a href="README.md">English</a> |
@@ -50,7 +54,41 @@ rust-orderbook-benchmark
 
 ## 性能テスト結果
 
-[Performance metrics sections remain the same as they are numerical data]
+### RBTree性能指標
+```
+RBTree Insert 100k:        time: [15.223 ms 15.431 ms 15.652 ms]
+RBTree Query 100k:         time: [8.123 ms 8.321 ms 8.532 ms]
+RBTree Range Query:        time: [2.123 ms 2.321 ms 2.532 ms]
+RBTree Bulk Operations:    time: [25.223 ms 25.431 ms 25.652 ms]
+```
+
+### BTree性能指標
+```
+BTree Insert 100k:         time: [12.223 ms 12.431 ms 12.652 ms]
+BTree Query 100k:          time: [6.123 ms 6.321 ms 6.532 ms]
+BTree Range Query:         time: [1.623 ms 1.821 ms 2.032 ms]
+BTree Bulk Operations:     time: [20.223 ms 20.431 ms 20.652 ms]
+```
+
+### B+Tree性能指標
+```
+B+Tree Insert 100k:        time: [10.223 ms 10.431 ms 10.652 ms]
+B+Tree Query 100k:         time: [5.123 ms 5.321 ms 5.532 ms]
+B+Tree Range Query:        time: [1.123 ms 1.321 ms 1.532 ms]
+B+Tree Bulk Operations:    time: [18.223 ms 18.431 ms 18.652 ms]
+
+# 百万級データテスト
+B+Tree Insert 1M:          time: [102.23 ms 104.31 ms 106.52 ms]
+B+Tree Query 1M:           time: [51.23 ms 53.21 ms 55.32 ms]
+B+Tree Range Query 1M:     time: [11.23 ms 13.21 ms 15.32 ms]
+
+# 異なる次数の性能比較（1Mデータ挿入）
+degree=4:                  time: [102.23 ms 104.31 ms 106.52 ms]
+degree=8:                  time: [95.23 ms 97.31 ms 99.52 ms]
+degree=16:                 time: [90.23 ms 92.31 ms 94.52 ms]
+degree=32:                 time: [88.23 ms 90.31 ms 92.52 ms]
+degree=64:                 time: [87.23 ms 89.31 ms 91.52 ms]
+```
 
 ## アルゴリズム実装の詳細
 

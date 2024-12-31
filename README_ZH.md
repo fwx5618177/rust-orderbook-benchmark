@@ -1,5 +1,9 @@
 # Orderbook
 
+[![GitHub](https://img.shields.io/github/license/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/fwx5618177/rust-orderbook-benchmark)](https://github.com/fwx5618177/rust-orderbook-benchmark/issues)
+
 <div align="center">
   <h2>Language / 语言 / 言語</h2>
   <a href="README.md">English</a> |
