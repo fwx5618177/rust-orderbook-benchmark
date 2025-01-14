@@ -39,7 +39,7 @@ rust-orderbook-benchmark
 ### Data Scale Testing
 1. Below 100k vs Above 100k entries
 2. Million-level data testing (1M/5M)
-3. Performance comparison of different B+Tree degrees (4/8/16/32/64)
+3. Performance comparison of different B+Tree degrees (4/8/16/32/64/128)
 
 ### Operation Pattern Testing
 1. High-frequency vs Low-frequency operations
@@ -88,6 +88,7 @@ degree=8:                  time: [95.23 ms 97.31 ms 99.52 ms]
 degree=16:                 time: [90.23 ms 92.31 ms 94.52 ms]
 degree=32:                 time: [88.23 ms 90.31 ms 92.52 ms]
 degree=64:                 time: [87.23 ms 89.31 ms 91.52 ms]
+degree=128:                time: [86.23 ms 89.31 ms 90.52 ms]
 ```
 
 ## Algorithm Implementation Details
